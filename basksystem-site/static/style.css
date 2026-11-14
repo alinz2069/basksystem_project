@@ -1,0 +1,17 @@
+:root { --bg:#f0f0f0; --fg:#222; --muted:#666; --link:#0b4aa0; color-scheme: light dark; }
+@media (prefers-color-scheme: dark) { :root { --bg:#1c1c1c; --fg:#ddd; --muted:#999; --link:#8ab4f8; } }
+body { margin:0 auto; max-width:42rem; padding:2rem 1.25rem 4rem; background:var(--bg); color:var(--fg);
+  font:1.05rem/1.9 Georgia, "Noto Serif TC", "Songti TC", "PMingLiU", serif; }
+a { color:var(--link); }
+header { margin-bottom:2.5rem; }
+.name { display:block; font-size:2rem; color:var(--fg); text-decoration:none; }
+.logo { display:block; max-width:100%; max-height:120px; height:auto; }
+nav { margin-top:.5rem; font-size:.95rem; }
+h2 { font-weight:normal; font-size:1.5rem; }
+h3 { margin:1.5rem 0 .25rem; font-size:1rem; font-style:italic; font-weight:normal; color:var(--muted); }
+ul { margin:0; padding-left:1.25rem; }
+.date { color:var(--muted); font-size:.9rem; }
+img { max-width:100%; height:auto; }
+pre, code { font-size:.9rem; overflow-x:auto; }
+blockquote { margin-left:0; padding-left:1rem; border-left:3px solid var(--muted); color:var(--muted); }
+footer { margin-top:4rem; color:var(--muted); font-size:.85rem; }
