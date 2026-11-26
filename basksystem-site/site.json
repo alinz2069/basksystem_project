@@ -3,5 +3,10 @@
   "url": "https://basksystem.skynotes.workers.dev",
   "since": "2026-11-13",
   "timezone": "Asia/Taipei",
-  "rss": false
+  "rss": false,
+  "links": {
+    "github": "",
+    "x": "",
+    "telegram": ""
+  }
 }

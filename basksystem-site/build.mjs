@@ -26,7 +26,7 @@ function read(file) {
       if (i > 0) meta[line.slice(0, i).trim()] = line.slice(i + 1).trim();
     }
   }
-  return { meta, html: marked.parse(body) };
+  return { meta, body, html: marked.parse(body) };
 }
 
 // Optional pages: they appear in the top-right nav only if the file exists in content/
@@ -38,13 +38,23 @@ const pageDefs = [
 
 const FONTS = "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=LXGW+WenKai+TC:wght@300;400;700&display=swap";
 
-function page(title, body) {
+
+const ICONS = {
+  github: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>`,
+  x: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>`,
+  telegram: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`,
+};
+const SOCIAL_LABEL = { github: "GitHub", x: "X", telegram: "Telegram" };
+
+function page(title, body, script = "") {
   const head = has("static/logo.png")
     ? `<a href="/"><img class="logo" src="/static/logo.png" alt="${esc(site.title)}"></a>`
     : `<a class="name" href="/">${esc(site.title)}</a>`;
   const icon = has("static/favicon.png") ? `<link rel="icon" href="/static/favicon.png">` : "";
   const navItems = pageDefs.map((p) => `<a href="/${p.name}.html">${p.label}</a>`);
   if (site.rss) navItems.push(`<a href="/atom.xml">RSS</a>`);
+  const social = Object.entries(site.links || {}).filter(([, u]) => u && true)
+    .map(([k, u]) => ICONS[k] ? `<a class="ico" href="${esc(u)}" target="_blank" rel="noopener" aria-label="${SOCIAL_LABEL[k]}">${ICONS[k]}</a>` : "").join("");
   const rssLink = site.rss ? `<link rel="alternate" type="application/atom+xml" href="/atom.xml">` : "";
   return `<!doctype html>
 <html lang="zh-Hant"><head><meta charset="utf-8">
@@ -55,7 +65,7 @@ function page(title, body) {
 <link rel="stylesheet" href="${FONTS}">
 <link rel="stylesheet" href="/static/style.css"></head>
 <body><header>${head}
-<nav>${navItems.join("")}</nav></header>
+<nav>${navItems.join("")}${social}</nav></header>
 <main>${body}</main>
 <footer><div class="meta">
 <p id="days" data-since="${site.since}">Online for ${days} days · since ${site.since}</p>
@@ -65,14 +75,16 @@ function page(title, body) {
 (function(){
   var root=document.documentElement,btn=document.getElementById("theme");
   function cur(){return root.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")}
-  function label(){btn.textContent=cur()==="dark"?"Light":"Dark"}
+  var MOON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+  var SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 1.5v2.5M12 20v2.5M4.2 4.2l1.8 1.8M18 18l1.8 1.8M1.5 12H4M20 12h2.5M4.2 19.8L6 18M18 6l1.8-1.8"/></svg>';
+  function label(){btn.innerHTML=cur()==="dark"?SUN:MOON}
   btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";root.dataset.theme=n;try{localStorage.setItem("theme",n)}catch(e){}label()});
   label();
   var d=document.getElementById("days"),s=d.dataset.since;
   var n=Math.max(0,Math.floor((Date.now()-Date.parse(s+"T00:00:00+08:00"))/864e5));
   d.textContent="Online for "+n+" days · since "+s;
 })();
-</script></body></html>`;
+</script>${script}</body></html>`;
 }
 
 fs.rmSync("dist", { recursive: true, force: true });
@@ -107,7 +119,40 @@ for (const [y, items] of byYear) {
 }
 fs.writeFileSync("dist/index.html", page(site.title, `<h2>Posts</h2>${list}`));
 
+
+function renderThoughts() {
+  const { meta, body } = read("content/thoughts.md");
+  const intro = meta.intro || "";
+  const entries = [];
+  let cur = null;
+  for (const line of body.split("\n")) {
+    const m = line.match(/^\[(\d{4}-\d{2}-\d{2})(?: (\d{1,2}:\d{2}))?\]\s*$/);
+    if (m) { cur = { date: m[1], time: m[2] ? m[2].padStart(5, "0") : "", lines: [] }; entries.push(cur); }
+    else if (cur) cur.lines.push(line);
+  }
+  entries.sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+  const years = [...new Set(entries.map((e) => e.date.slice(0, 4)))];
+  const tabs = `<div class="tabs"><button type="button" data-y="all" class="on">All</button>` +
+    years.map((y) => `<button type="button" data-y="${y}">${y}</button>`).join("") + `</div>`;
+  const items = entries.map((e) =>
+    `<article class="t" data-year="${e.date.slice(0, 4)}"><div class="tb">${marked.parse(e.lines.join("\n").trim(), { breaks: true })}</div><time>${e.date}${e.time ? " " + e.time : ""}</time></article>`
+  ).join("");
+  const script = `<script>
+(function(){
+  var bs=document.querySelectorAll(".tabs button"),ts=document.querySelectorAll(".t");
+  function show(y){bs.forEach(function(b){b.classList.toggle("on",b.dataset.y===y)});ts.forEach(function(t){t.hidden=!(y==="all"||t.dataset.year===y)})}
+  bs.forEach(function(b){b.addEventListener("click",function(){show(b.dataset.y);history.replaceState(null,"",b.dataset.y==="all"?location.pathname:"#"+b.dataset.y)})});
+  var h=location.hash.slice(1);if(h&&document.querySelector('.tabs button[data-y="'+h+'"]'))show(h);
+})();
+</script>`;
+  const html = `<h2>${esc(meta.title || "Thoughts")}</h2>` +
+    (intro ? `<div class="intro"><span class="qmark" aria-hidden="true">\u201C</span><p>${esc(intro)}</p></div>` : "") +
+    tabs + `<section class="thoughts">${items}</section>`;
+  fs.writeFileSync("dist/thoughts.html", page(`${meta.title || "Thoughts"} - ${site.title}`, html, script));
+}
+
 for (const { name } of pageDefs) {
+  if (name === "thoughts") { renderThoughts(); continue; }
   const { meta, html } = read(`content/${name}.md`);
   const t = meta.title || name;
   fs.writeFileSync(`dist/${name}.html`, page(`${t} - ${site.title}`, `<h2>${esc(t)}</h2>${html}`));
