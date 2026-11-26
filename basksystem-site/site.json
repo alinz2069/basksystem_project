@@ -1,5 +1,7 @@
 {
   "title": "數字天空",
   "url": "https://basksystem.skynotes.workers.dev",
-  "footer": "數字天空"
+  "since": "2026-11-13",
+  "timezone": "Asia/Taipei",
+  "rss": false
 }
