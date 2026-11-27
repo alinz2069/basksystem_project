@@ -119,22 +119,22 @@ function renderThoughts() {
     else if (cur) cur.lines.push(line);
   }
   entries.sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
-  const years = [...new Set(entries.map((e) => e.date.slice(0, 4)))];
-  const tabs = `<div class="tabs"><button type="button" data-y="all" class="on">All</button>` +
-    years.map((y) => `<button type="button" data-y="${y}">${y}</button>`).join("") + `</div>`;
+  const years = [...new Set(entries.map((e) => e.date.slice(0, 4)))]; // newest first
+  const latest = years[0] || "";
+  const tabs = `<div class="tabs"><button type="button" data-y="${latest}" class="on">Latest</button>` +
+    years.slice(1).map((y) => `<button type="button" data-y="${y}">${y}</button>`).join("") + `</div>`;
   const items = entries.map((e) =>
-    `<article class="t" data-year="${e.date.slice(0, 4)}"><div class="tb">${marked.parse(e.lines.join("\n").trim(), { breaks: true })}</div><time>${e.date}${e.time ? " " + e.time : ""}</time></article>`
+    `<article class="t" data-year="${e.date.slice(0, 4)}"${e.date.slice(0, 4) === latest ? "" : " hidden"}><div class="tb">${marked.parse(e.lines.join("\n").trim(), { breaks: true })}</div><time>${e.date}${e.time ? " " + e.time : ""}</time></article>`
   ).join("");
   const script = `<script>
 (function(){
   var bs=document.querySelectorAll(".tabs button"),ts=document.querySelectorAll(".t");
-  function show(y){bs.forEach(function(b){b.classList.toggle("on",b.dataset.y===y)});ts.forEach(function(t){t.hidden=!(y==="all"||t.dataset.year===y)})}
-  bs.forEach(function(b){b.addEventListener("click",function(){show(b.dataset.y);history.replaceState(null,"",b.dataset.y==="all"?location.pathname:"#"+b.dataset.y)})});
+  function show(y){bs.forEach(function(b){b.classList.toggle("on",b.dataset.y===y)});ts.forEach(function(t){t.hidden=t.dataset.year!==y})}
+  bs.forEach(function(b){b.addEventListener("click",function(){show(b.dataset.y);history.replaceState(null,"",b.dataset.y==="${latest}"?location.pathname:"#"+b.dataset.y)})});
   var h=location.hash.slice(1);if(h&&document.querySelector('.tabs button[data-y="'+h+'"]'))show(h);
 })();
 </script>`;
-  const html = `<h2>${esc(meta.title || "Thoughts")}</h2>` +
-    (intro ? `<div class="intro"><span class="qmark" aria-hidden="true">\u201C</span><p>${esc(intro)}</p></div>` : "") +
+  const html = (intro ? `<div class="intro"><span class="qmark" aria-hidden="true">\u201C</span><p>${esc(intro)}</p></div>` : "") +
     tabs + `<section class="thoughts">${items}</section>`;
   fs.writeFileSync("dist/thoughts.html", page(`${meta.title || "Thoughts"} - ${site.title}`, html, script));
 }
