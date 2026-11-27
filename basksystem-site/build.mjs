@@ -9,8 +9,10 @@ const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, 
 const tz = site.timezone || "Asia/Taipei";
 const now = new Date();
 const stamp = new Intl.DateTimeFormat("sv-SE", {
-  timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
-}).format(now); // e.g. 2026-11-26 14:30
+  timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit",
+}).format(now); // e.g. 2026-11-27
+const y0 = String(site.since || stamp).slice(0, 4), y1 = stamp.slice(0, 4);
+const yr = y0 === y1 ? y1 : `${y0}\u2013${y1}`;
 const sinceMs = Date.parse(`${site.since}T00:00:00+08:00`);
 const days = Math.max(0, Math.floor((now.getTime() - sinceMs) / 86400000));
 
@@ -67,9 +69,7 @@ function page(title, body, script = "") {
 <body><header>${head}
 <nav>${navItems.join("")}${social}</nav></header>
 <main>${body}</main>
-<footer><div class="meta">
-<p id="days" data-since="${site.since}">Online for ${days} days · since ${site.since}</p>
-<p>Last updated ${stamp}</p></div>
+<footer><p class="meta">\u00A9${yr} ${esc(site.author || "")}<span class="sep">|</span>Last updated ${stamp}</p>
 <button id="theme" type="button" aria-label="Toggle light / dark"></button></footer>
 <script>
 (function(){
@@ -80,9 +80,6 @@ function page(title, body, script = "") {
   function label(){btn.innerHTML=cur()==="dark"?SUN:MOON}
   btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";root.dataset.theme=n;try{localStorage.setItem("theme",n)}catch(e){}label()});
   label();
-  var d=document.getElementById("days"),s=d.dataset.since;
-  var n=Math.max(0,Math.floor((Date.now()-Date.parse(s+"T00:00:00+08:00"))/864e5));
-  d.textContent="Online for "+n+" days · since "+s;
 })();
 </script>${script}</body></html>`;
 }
@@ -105,18 +102,9 @@ for (const p of posts) {
     `<article><h2>${esc(p.title)}</h2><p class="date">${p.date}</p>${p.html}</article>`));
 }
 
-const byYear = new Map();
-for (const p of posts) {
-  const y = p.date.slice(0, 4);
-  if (!byYear.has(y)) byYear.set(y, []);
-  byYear.get(y).push(p);
-}
-let list = "";
-for (const [y, items] of byYear) {
-  list += `<h3>${y}</h3><ul>` + items.map((p) =>
-    `<li><a href="/posts/${p.slug}.html">${esc(p.title)}</a> <span class="date">(${p.date.slice(0, 7)})</span></li>`
-  ).join("") + `</ul>`;
-}
+const list = `<ul class="posts">` + posts.map((p) =>
+  `<li><a href="/posts/${p.slug}.html">${esc(p.title)}</a><span class="pdate">${p.date}</span></li>`
+).join("") + `</ul>`;
 fs.writeFileSync("dist/index.html", page(site.title, `<h2>Posts</h2>${list}`));
 
 
@@ -170,4 +158,4 @@ ${entries}
 </feed>`);
 }
 
-console.log(`Built ${posts.length} posts, ${pageDefs.length} pages. Footer: ${days} days, ${stamp}.`);
+console.log(`Built ${posts.length} posts, ${pageDefs.length} pages. Footer: \u00A9${yr}, ${stamp}.`);
