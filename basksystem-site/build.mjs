@@ -28,7 +28,14 @@ function read(file) {
       if (i > 0) meta[line.slice(0, i).trim()] = line.slice(i + 1).trim();
     }
   }
-  return { meta, body, html: marked.parse(body) };
+  const isPost = file.includes("content/posts/");
+  let html = marked.parse(body, { breaks: isPost });
+  if (isPost) {
+    // A quote whose first paragraph is only bold text = a quote with a title (label)
+    html = html.replace(/<blockquote>\s*<p><strong>([\s\S]*?)<\/strong><\/p>/g,
+      '<blockquote class="has-label">\n<p class="qlabel">$1</p>');
+  }
+  return { meta, body, html };
 }
 
 // Optional pages: they appear in the top-right nav only if the file exists in content/
@@ -93,13 +100,13 @@ const posts = fs.readdirSync("content/posts")
   .map((f) => {
     const { meta, html } = read("content/posts/" + f);
     const slug = f.replace(/\.md$/, "");
-    return { slug, date: meta.date || "1970-01-01", title: meta.title || slug, html };
+    return { slug, date: meta.date || "1970-01-01", title: meta.title || slug, epigraph: meta.epigraph || "", html };
   })
   .sort((a, b) => b.date.localeCompare(a.date));
 
 for (const p of posts) {
   fs.writeFileSync(`dist/posts/${p.slug}.html`, page(`${p.title} - ${site.title}`,
-    `<article><h2>${esc(p.title)}</h2><p class="date">${p.date}</p>${p.html}</article>`));
+    `<article><h2>${esc(p.title)}</h2><p class="date">${p.date}</p>${p.epigraph ? `<div class="epigraph"><span class="qmark" aria-hidden="true">\u201C</span><p>${esc(p.epigraph)}</p></div>` : ""}${p.html}</article>`));
 }
 
 const list = `<ul class="posts">` + posts.map((p) =>
